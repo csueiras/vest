@@ -17,6 +17,11 @@ func run(params: VestCLI.Params) -> int:
 	await _connect(params)
 
 	var results := await _run_tests(params)
+	if results == null:
+		push_error("Test run failed!")
+		_disconnect()
+		return 1
+
 	_report(params, results)
 	_send_results_over_network(params, results)
 

@@ -5,6 +5,14 @@ func get_suite_name() -> String:
 
 func suite_params():
 	define("CLI Params", func():
+		test("should validate missing test target", func():
+			var params := VestCLI.Params.new()
+			params.run_file = ""
+			params.run_glob = ""
+
+			expect_contains(params.validate(), "No tests specified!")
+		)
+
 		test("should serialize to args", func():
 			# Given
 			var params := VestCLI.Params.new()
@@ -59,4 +67,14 @@ func suite_params():
 			# Then
 			expect_equal(actual.to_args(), expected.to_args())
 		)
+	)
+
+	test("should fail cleanly when run file is missing", func():
+		var runner := VestCLIRunner.new()
+		var params := VestCLI.Params.new()
+		params.run_file = "res://does-not-exist.test.gd"
+
+		var exit_code := await runner.run(params)
+
+		expect_equal(exit_code, 1)
 	)

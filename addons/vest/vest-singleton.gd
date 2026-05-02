@@ -51,7 +51,8 @@ static func until(condition: Callable, duration: float = 5., interval: float = 0
 		while true:
 			if condition.call():
 				return OK
-			await _scene_tree.process_frame
+			if is_zero_approx(interval): await _scene_tree.process_frame
+			else: await _scene_tree.create_timer(interval).timeout
 
 	var deadline := time() + duration
 	while time() < deadline:

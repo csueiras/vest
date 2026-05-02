@@ -49,7 +49,8 @@ static func reload() -> void:
 
 static func get_run_params() -> VestCLI.Params:
 	if run_params == null:
-		if FileAccess.file_exists(get_config_path()) and ClassDB.class_exists("VestCLI"):
+		if FileAccess.file_exists(get_config_path()):
 			reload()
-		run_params = VestCLI.Params.new()
+		if run_params == null:
+			run_params = VEST_CLI_SCRIPT.Params.new()
 	return run_params

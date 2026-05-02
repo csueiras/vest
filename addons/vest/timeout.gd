@@ -22,10 +22,11 @@ func until(condition: Callable) -> Error:
 	var deadline := start + _remaining
 	while Vest.time() < deadline:
 		if condition.call():
-			_remaining -= Vest.time() - start
+			_remaining = maxf(0.0, _remaining - (Vest.time() - start))
 			return OK
 
 		if is_zero_approx(_interval): await _scene_tree.process_frame
 		else: await _scene_tree.create_timer(_interval).timeout
 
+	_remaining = maxf(0.0, _remaining - (Vest.time() - start))
 	return ERR_TIMEOUT

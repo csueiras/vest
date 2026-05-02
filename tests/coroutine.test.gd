@@ -1,5 +1,7 @@
 extends VestTest
 
+var _zero_duration_wait_flag := false
+
 func get_suite_name() -> String:
 	return "Coroutine"
 
@@ -35,3 +37,25 @@ func after_all():
 
 func test_await_from_method():
 	expect_equal(await Vest.sleep(), OK)
+
+func test_until_zero_duration_waits_until_condition_changes():
+	_zero_duration_wait_flag = false
+	Vest.get_tree().process_frame.connect(_set_zero_duration_wait_flag, CONNECT_ONE_SHOT)
+
+	var result := await Vest.until(func():
+		return _zero_duration_wait_flag
+	, 0.0)
+
+	expect_equal(result, OK)
+
+func test_timeout_consumes_budget_after_timeout():
+	var timeout := Vest.timeout(0.01, 0.0)
+
+	var first := await timeout.until(func(): return false)
+	var second := await timeout.until(func(): return true)
+
+	expect_equal(first, ERR_TIMEOUT)
+	expect_equal(second, ERR_TIMEOUT)
+
+func _set_zero_duration_wait_flag():
+	_zero_duration_wait_flag = true

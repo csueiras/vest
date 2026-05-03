@@ -1,18 +1,18 @@
 @tool
 extends Object
 
+const VEST_CLI_SCRIPT := preload("res://addons/vest/cli/vest-cli.gd")
+
 static var _path: String
 
 static var test_glob := "res://*.test.gd"
-static var run_params := VestCLI.Params.new()
+static var run_params: VestCLI.Params = null
 
 static func _static_init():
-	# If config file doesn't exist, create it
 	if not FileAccess.file_exists(get_config_path()):
 		flush()
 
-	# Load settings from file
-	reload()
+	reload_test_glob()
 
 static func get_config_path() -> String:
 	if not _path:
@@ -32,23 +32,49 @@ static func get_config_path() -> String:
 	return _path
 
 static func flush() -> void:
-	if not run_params:
-		run_params = VestCLI.Params.new()
-
 	var data := {
 		"test_glob": test_glob if test_glob else "",
-		"run_params": run_params.to_args()
+		"run_params": get_run_params().to_args()
 	}
 
 	var file := FileAccess.open(get_config_path(), FileAccess.WRITE)
+	if file == null:
+		push_error("Couldn't write local settings!")
+		return
+
 	file.store_string(var_to_str(data))
 	file.flush()
 	file.close()
 
 static func reload() -> void:
+	var data := _read_data()
+	test_glob = data.get("test_glob", test_glob)
+	run_params = VEST_CLI_SCRIPT.Params.parse(data.get("run_params", []))
+
+static func get_run_params() -> VestCLI.Params:
+	if run_params == null:
+		reload_run_params()
+		if run_params == null:
+			run_params = VEST_CLI_SCRIPT.Params.new()
+	return run_params
+
+static func reload_test_glob() -> void:
+	var data := _read_data()
+	test_glob = data.get("test_glob", test_glob)
+
+static func reload_run_params() -> void:
+	if not FileAccess.file_exists(get_config_path()):
+		run_params = VEST_CLI_SCRIPT.Params.new()
+		return
+
+	var data := _read_data()
+	run_params = VEST_CLI_SCRIPT.Params.parse(data.get("run_params", []))
+
+static func _read_data() -> Dictionary:
 	var file := FileAccess.open(get_config_path(), FileAccess.READ)
+	if file == null:
+		return {}
+
 	var data := str_to_var(file.get_as_text()) as Dictionary
 	file.close()
-
-	test_glob = data["test_glob"]
-	run_params = VestCLI.Params.parse(data["run_params"])
+	return data

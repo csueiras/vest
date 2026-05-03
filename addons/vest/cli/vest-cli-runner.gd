@@ -17,7 +17,15 @@ func run(params: VestCLI.Params) -> int:
 	await _connect(params)
 
 	var results := await _run_tests(params)
-	_report(params, results)
+	if results == null:
+		push_error("Test run failed!")
+		_disconnect()
+		return 1
+
+	if not _report(params, results):
+		_disconnect()
+		return 1
+
 	_send_results_over_network(params, results)
 
 	_disconnect()
@@ -47,7 +55,7 @@ func _run_tests(params: VestCLI.Params) -> VestResult.Suite:
 
 	return results
 
-func _report(params: VestCLI.Params, results: VestResult.Suite):
+func _report(params: VestCLI.Params, results: VestResult.Suite) -> bool:
 	var report := TAPReporter.report(results)
 
 	if params.report_format:
@@ -55,10 +63,18 @@ func _report(params: VestCLI.Params, results: VestResult.Suite):
 			print(report)
 		else:
 			var fa := FileAccess.open(params.report_file, FileAccess.WRITE)
+			if fa == null:
+				push_error("Couldn't write report to %s!" % params.report_file)
+				return false
+
 			fa.store_string(report)
 			fa.close()
 
+	return true
+
 func _connect(params: VestCLI.Params):
+	_disconnect()
+
 	if not params.host and params.port == -1:
 		return
 
@@ -85,6 +101,7 @@ func _connect(params: VestCLI.Params):
 func _disconnect():
 	if _peer != null:
 		_peer.disconnect_from_host()
+		_peer = null
 
 func _send_results_over_network(params: VestCLI.Params, results: VestResult.Suite):
 	if not _peer:

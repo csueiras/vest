@@ -63,8 +63,6 @@ func _exit_tree():
 	remove_control_from_bottom_panel(bottom_control)
 	bottom_control.queue_free()
 
-	remove_settings(SETTINGS)
-
 func add_settings(settings: Array):
 	for setting in settings:
 		add_setting(setting)

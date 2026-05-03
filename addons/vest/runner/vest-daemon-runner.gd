@@ -38,20 +38,18 @@ func _run_with_params(params: VestCLI.Params) -> VestResult.Suite:
 	# Start host
 	if _start(-1) != OK:
 		push_error("Couldn't start vest host!")
+		_stop()
 		return null
 
 	# Start process
 	params.host = "127.0.0.1"
 	params.port = _port
-	if not _is_debug_run:
-		VestCLI.run(params)
-	else:
-		_is_debug_run = false
-		VestCLI.debug(params)
+	_launch_child_process(params)
 
 	# Wait for agent to connect
 	if await timeout.until(func(): return _server.is_connection_available()) != OK:
 		push_error("Agent didn't connect in time!")
+		_stop()
 		return null
 
 	_peer = _server.take_connection()
@@ -106,9 +104,18 @@ func _start(port: int = -1):
 	return OK
 
 func _stop():
-	_peer.disconnect_from_host()
-	_server.stop()
+	if _peer != null:
+		_peer.disconnect_from_host()
+	if _server != null:
+		_server.stop()
 
 	_peer = null
 	_server = null
 	_port = -1
+
+func _launch_child_process(params: VestCLI.Params) -> void:
+	if not _is_debug_run:
+		VestCLI.run(params)
+	else:
+		_is_debug_run = false
+		VestCLI.debug(params)

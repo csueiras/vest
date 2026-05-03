@@ -74,25 +74,25 @@ func _get_suite() -> VestDefs.Suite:
 			var is_only := _is_only(method_name)
 
 			var param_provider_name := method["default_args"][0] as String
-			if not has_method(param_provider_name):
+			if has_method(param_provider_name):
+				var params = await call(param_provider_name)
+				if params is Array and params.all(func(it): return it is Array):
+					for i in range(params.size()):
+						test(
+							"%s#%d %s" % [test_name, i+1, params[i]],
+							func(): await callv(method["name"], params[i]),
+							is_only,
+							method_name
+						)
+				else:
+					push_warning(
+						"Can't run parametrized test \"%s\", provider \"%s\" didn't return array or arrays: %s" % \
+						[method["name"], param_provider_name, params]
+					)
+			else:
 				push_warning(
 					"Can't run parametrized test \"%s\", provider method \"%s\" is missing!" % \
 					[method["name"], param_provider_name]
-				)
-
-			var params = await call(param_provider_name)
-			if not params is Array or not params.all(func(it): return it is Array):
-				push_warning(
-					"Can't run parametrized test \"%s\", provider \"%s\" didn't return array or arrays: %s" % \
-					[method["name"], param_provider_name, params]
-				)
-
-			for i in range(params.size()):
-				test(
-					"%s#%d %s" % [test_name, i+1, params[i]],
-					func(): await callv(method["name"], params[i]),
-					is_only,
-					method_name
 				)
 	)
 

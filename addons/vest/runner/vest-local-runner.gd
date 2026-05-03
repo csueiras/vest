@@ -5,7 +5,7 @@ var _result_buffer: VestResult.Suite
 
 ## Run a test script
 func run_script(script: Script, only_mode: int = Vest.__.ONLY_DEFAULT) -> VestResult.Suite:
-	var _result_buffer = VestResult.Suite.new()
+	_result_buffer = VestResult.Suite.new()
 	if not script:
 		return null
 

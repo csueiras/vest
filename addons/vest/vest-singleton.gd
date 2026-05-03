@@ -43,18 +43,23 @@ static func message(p_message: String):
 ## Returns [constant ERR_TIMEOUT] if [param duration] was exceeded.[br]
 ## Returns [constant ERR_UNAVAILABLE] if no [SceneTree] is available.
 static func until(condition: Callable, duration: float = 5., interval: float = 0.0) -> Error:
-	var deadline := time() + duration
-
 	if not _scene_tree:
 		push_warning("Missing reference to SceneTree, will return immediately!")
 		return ERR_UNAVAILABLE
 
+	if is_zero_approx(duration):
+		while true:
+			if condition.call():
+				return OK
+			if is_zero_approx(interval): await _scene_tree.process_frame
+			else: await _scene_tree.create_timer(interval).timeout
+
+	var deadline := time() + duration
 	while time() < deadline:
 		if condition.call():
 			return OK
 
-		if is_zero_approx(duration): await _scene_tree.process_frame
-		else: await _scene_tree.create_timer(interval).timeout
+		await _scene_tree.create_timer(interval).timeout
 
 	return ERR_TIMEOUT
 

@@ -1,6 +1,7 @@
 # Godot 4+ specific ignores
 .godot/
 .worktrees/
+.DS_Store
 
 vest-report.log
 vest.log

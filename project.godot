@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="vest"
-config/features=PackedStringArray("4.1")
+config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="res://icon.png"
 
 [autoload]
@@ -20,7 +20,9 @@ Autoload="*res://src/autoload.gd"
 
 [debug]
 
-gdscript/warnings/exclude_addons=false
+gdscript/warnings/directory_rules={
+"res://addons": 1
+}
 
 [editor_plugins]
 
@@ -29,6 +31,11 @@ enabled=PackedStringArray("res://addons/vest/plugin.cfg")
 [filesystem]
 
 import/blender/enabled=false
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
 
 [vest]
 

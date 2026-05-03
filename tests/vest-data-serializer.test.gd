@@ -4,10 +4,6 @@ func get_suite_name():
 	return "VestDataSerializer"
 
 func suite():
-	var ref_a := SerializableObject.of(1)
-	var ref_b := SerializableObject.of(ref_a)
-	ref_a._value = ref_b
-
 	var cases := [
 		["bool", true, true],
 		["int", 782, 782],
@@ -25,7 +21,6 @@ func suite():
 			{ "foo": SerializableObject.of([1, SerializableObject.of(2)]) },
 			{ "foo": { "value": [1, { "value": 2 }] } }
 		],
-		["circular reference", ref_a, { "value": { "value": { "value": { "value": "SerializableObject" }}}}],
 		["null", null, null]
 	]
 
@@ -35,8 +30,22 @@ func suite():
 		var expected = case[2]
 
 		test(name.capitalize(), func():
-			expect_equal(Vest.__.Serializer.serialize(to_serialize, 8), expected)
+			expect_equal(Vest.__.Serializer.serialize(to_serialize, 8, false), expected)
 		)
+
+	test("Circular reference", func():
+		var ref_a := SerializableObject.of(1)
+		var ref_b := SerializableObject.of(ref_a)
+		ref_a._value = ref_b
+
+		expect_equal(
+			Vest.__.Serializer.serialize(ref_a, 8, false),
+			{ "value": { "value": { "value": { "value": "SerializableObject" }}}}
+		)
+
+		ref_a._value = null
+		ref_b._value = null
+	)
 
 class SerializableObject:
 	var _value: Variant

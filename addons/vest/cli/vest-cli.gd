@@ -1,6 +1,10 @@
 extends SceneTree
 class_name VestCLI
 
+const VEST := preload("res://addons/vest/vest-singleton.gd")
+const VEST_CLI_RUNNER := preload("res://addons/vest/cli/vest-cli-runner.gd")
+const CLI_SCRIPT_PATH := "res://addons/vest/cli/vest-cli.gd"
+
 ## Class for running vest from the CLI
 ## [br][br]
 ## See [VestCLI.Params]
@@ -20,7 +24,7 @@ class Params:
 	var report_file: String = ""
 
 	## How to handle tests marked as `only`
-	var only_mode: int = Vest.__.ONLY_DISABLED
+	var only_mode: int = VEST.__.ONLY_DISABLED
 
 	## Host to connect to for sending results
 	var host: String = ""
@@ -54,9 +58,9 @@ class Params:
 		if port != -1: result.append_array(["--vest-port", str(port)])
 
 		match only_mode:
-			Vest.__.ONLY_DISABLED: result.append("--no-only")
-			Vest.__.ONLY_AUTO: result.append("--auto-only")
-			Vest.__.ONLY_ENABLED: result.append("--only")
+			VEST.__.ONLY_DISABLED: result.append("--no-only")
+			VEST.__.ONLY_AUTO: result.append("--auto-only")
+			VEST.__.ONLY_ENABLED: result.append("--only")
 
 		return result
 
@@ -76,9 +80,9 @@ class Params:
 			elif arg == "--vest-report-format": result.report_format = val
 			elif arg == "--vest-port": result.port = val.to_int()
 			elif arg == "--vest-host": result.host = val
-			elif arg == "--no-only": result.only_mode = Vest.__.ONLY_DISABLED
-			elif arg == "--only": result.only_mode = Vest.__.ONLY_ENABLED
-			elif arg == "--auto-only": result.only_mode = Vest.__.ONLY_AUTO
+			elif arg == "--no-only": result.only_mode = VEST.__.ONLY_DISABLED
+			elif arg == "--only": result.only_mode = VEST.__.ONLY_ENABLED
+			elif arg == "--auto-only": result.only_mode = VEST.__.ONLY_AUTO
 
 		return result
 
@@ -86,25 +90,26 @@ class Params:
 ## [br][br]
 ## Returns the spawned process' ID.
 static func run(params: Params) -> int:
-	var args = ["--headless", "-s", (VestCLI as Script).resource_path]
+	var args = ["--headless", "-s", CLI_SCRIPT_PATH]
 	return OS.create_instance(args + params.to_args())
 
 ## Run vest in debug mode.
 static func debug(params: Params):
-	Vest.__.LocalSettings.run_params = params
-	Vest.__.LocalSettings.flush()
-	Vest._get_editor_interface()\
-		.play_custom_scene(preload("res://addons/vest/cli/vest-cli-scene.tscn").resource_path)
+	VEST.__.LocalSettings.run_params = params
+	if not VEST.__.LocalSettings.flush():
+		return
+	VEST._get_editor_interface()\
+		.play_custom_scene(load("res://addons/vest/cli/vest-cli-scene.tscn").resource_path)
 
 func _init():
-	Vest._register_scene_tree(self)
+	VEST._register_scene_tree(self)
 
 	# Wait a frame for autoloads to register
 	await process_frame
 
 	var params := Params.parse(OS.get_cmdline_args())
-	var runner := VestCLIRunner.new()
+	var runner: Object = VEST_CLI_RUNNER.new()
 
-	var exit_code := await runner.run(params)
+	var exit_code: int = await runner.call("run", params)
 
 	quit(exit_code)

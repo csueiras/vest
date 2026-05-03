@@ -4,20 +4,30 @@ class_name VestCLIRunner
 ## Implements functionality to run tests
 
 var _peer: StreamPeerTCP = null
+var _emit_diagnostics := true
 
 ## Run tests with [Params]
 func run(params: VestCLI.Params) -> int:
 	var validation_errors := params.validate()
 	if not validation_errors.is_empty():
 		for error in validation_errors:
-			OS.alert(error)
-			push_error(error)
+			if _emit_diagnostics:
+				OS.alert(error)
+				push_error(error)
 		return 1
 
 	await _connect(params)
 
 	var results := await _run_tests(params)
-	_report(params, results)
+	if results == null:
+		_push_error("Test run failed!")
+		_disconnect()
+		return 1
+
+	if not _report(params, results):
+		_disconnect()
+		return 1
+
 	_send_results_over_network(params, results)
 
 	_disconnect()
@@ -47,7 +57,7 @@ func _run_tests(params: VestCLI.Params) -> VestResult.Suite:
 
 	return results
 
-func _report(params: VestCLI.Params, results: VestResult.Suite):
+func _report(params: VestCLI.Params, results: VestResult.Suite) -> bool:
 	var report := TAPReporter.report(results)
 
 	if params.report_format:
@@ -55,10 +65,18 @@ func _report(params: VestCLI.Params, results: VestResult.Suite):
 			print(report)
 		else:
 			var fa := FileAccess.open(params.report_file, FileAccess.WRITE)
+			if fa == null:
+				_push_error("Couldn't write report to %s!" % params.report_file)
+				return false
+
 			fa.store_string(report)
 			fa.close()
 
+	return true
+
 func _connect(params: VestCLI.Params):
+	_disconnect()
+
 	if not params.host and params.port == -1:
 		return
 
@@ -71,12 +89,12 @@ func _connect(params: VestCLI.Params):
 	var peer := StreamPeerTCP.new()
 	var err := peer.connect_to_host(host, port)
 	if err != OK:
-		push_warning("Couldn't connect on port %d! %s" % [port, error_string(err)])
+		_push_warning("Couldn't connect on port %d! %s" % [port, error_string(err)])
 		return
 
 	await Vest.until(func(): peer.poll(); return peer.get_status() != StreamPeerTCP.STATUS_CONNECTING)
 	if peer.get_status() != StreamPeerTCP.STATUS_CONNECTED:
-		push_warning("Connection failed! Socket status: %d" % [peer.get_status()])
+		_push_warning("Connection failed! Socket status: %d" % [peer.get_status()])
 		return
 
 	peer.set_no_delay(true)
@@ -85,9 +103,18 @@ func _connect(params: VestCLI.Params):
 func _disconnect():
 	if _peer != null:
 		_peer.disconnect_from_host()
+		_peer = null
 
 func _send_results_over_network(params: VestCLI.Params, results: VestResult.Suite):
 	if not _peer:
 		return
 
 	_peer.put_var(results._to_wire(), true)
+
+func _push_error(message: String) -> void:
+	if _emit_diagnostics:
+		push_error(message)
+
+func _push_warning(message: String) -> void:
+	if _emit_diagnostics:
+		push_warning(message)

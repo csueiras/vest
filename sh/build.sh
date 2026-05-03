@@ -38,7 +38,7 @@ for addon in ${addons[@]}; do
     cp -r "${addon_src}" "${addon_tmp}"
 
     has_deps="false"
-    for dep in ${addon_deps[$addon]}; do
+    for dep in $(get_addon_deps "$addon"); do
       print "Adding dependency $dep"
       cp -r "$ROOT/addons/${dep}" "${addon_tmp}"
       "$ROOT/sh/contributors.sh" > "${addon_tmp}/${dep}/CONTRIBUTORS.md"
@@ -61,4 +61,3 @@ cd site
 zip -r "../build/vest.docs.v${version}.zip" ./*
 cd ..
 rm -rf site
-

@@ -3,6 +3,25 @@ extends VestTest
 var _local_settings_snapshot: Dictionary = {}
 var _local_settings_fixture_active := false
 
+class NullResultRunner extends VestCLIRunner:
+	func _init():
+		_emit_diagnostics = false
+
+	func _run_tests(_params: VestCLI.Params) -> VestResult.Suite:
+		return null
+
+class ReportFailureRunner extends VestCLIRunner:
+	func _init():
+		_emit_diagnostics = false
+
+	func _run_tests(_params: VestCLI.Params) -> VestResult.Suite:
+		var result := VestResult.Suite.new()
+		result.suite = VestDefs.Suite.new()
+		return result
+
+	func _report(_params: VestCLI.Params, _results: VestResult.Suite) -> bool:
+		return false
+
 func get_suite_name() -> String:
 	return "VestCLI"
 
@@ -129,16 +148,42 @@ func suite_params():
 			settings._path = "/definitely/missing/.vestrc"
 			settings.run_params = VestCLI.Params.new()
 
-			settings.flush()
+			expect_false(settings.flush(false))
 
 			expect_equal(settings._read_data(), {})
+		)
+
+		test("should preserve persisted test glob when saving debug params", func():
+			var settings := Vest.__.LocalSettings
+			var path := settings.get_config_path()
+			var custom_glob := "res://custom/**/*.test.gd"
+
+			var file := FileAccess.open(path, FileAccess.WRITE)
+			file.store_string(var_to_str({
+				"test_glob": custom_glob,
+				"run_params": []
+			}))
+			file.close()
+
+			settings.reload()
+
+			var params := VestCLI.Params.new()
+			params.run_file = "res://tests/autoload.test.gd"
+			settings.run_params = params
+
+			expect_true(settings.flush())
+
+			var saved_file := FileAccess.open(path, FileAccess.READ)
+			var data := str_to_var(saved_file.get_as_text()) as Dictionary
+			saved_file.close()
+
+			expect_equal(data["test_glob"], custom_glob)
 		)
 	)
 
 	test("should return exit code 1 when run file is missing", func():
-		var runner := VestCLIRunner.new()
+		var runner := NullResultRunner.new()
 		var params := VestCLI.Params.new()
-		params.run_file = "res://does-not-exist.test.gd"
 
 		var exit_code := await runner.run(params)
 
@@ -146,11 +191,9 @@ func suite_params():
 	)
 
 	test("should return exit code 1 when report file cannot be written", func():
-		var runner := VestCLIRunner.new()
+		var runner := ReportFailureRunner.new()
 		var params := VestCLI.Params.new()
 		params.run_file = "res://tests/autoload.test.gd"
-		params.report_format = "tap"
-		params.report_file = "/definitely/missing/report.tap"
 
 		var exit_code := await runner.run(params)
 

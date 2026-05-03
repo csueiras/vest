@@ -1,10 +1,12 @@
 # Vest Bug Review
 
-This review focuses on runtime and behavioral defects in the addon. Findings below are either reproduced locally with Godot `4.6.2` or are direct control-flow bugs in the current implementation.
+This is a historical bug-review record for this branch. The findings below describe the defects as they were observed at the time of review; they were later fixed on `bugfix/review-findings`.
+
+File and line references are historical discovery-time references, not claims about current post-fix line numbers.
 
 ## 1. `VestLocalSettings` throws a script error during class initialization
 
-Location: `addons/vest/vest-local-settings.gd:7`
+Historical location at discovery: `addons/vest/vest-local-settings.gd:7`
 
 `run_params` is initialized with `VestCLI.Params.new()` as a static variable. In practice this raises `Invalid call. Nonexistent function 'new' in base 'GDScript'` during script initialization, which I reproduced while running both `sh/test.sh` and `godot --headless -s addons/vest/cli/vest-cli.gd ...`.
 
@@ -12,7 +14,7 @@ Impact: every CLI/editor startup that loads `VestLocalSettings` emits a script e
 
 ## 2. `Vest.until(..., duration = 0)` immediately times out instead of waiting indefinitely
 
-Location: `addons/vest/vest-singleton.gd:40-59`
+Historical location at discovery: `addons/vest/vest-singleton.gd:40-59`
 
 The API docs explicitly say `duration == 0.` may wait infinitely. The implementation sets `deadline := time() + duration` and then loops while `time() < deadline`. With `duration == 0`, the loop never executes and the method returns `ERR_TIMEOUT` immediately.
 
@@ -20,7 +22,7 @@ Impact: code using the documented "wait forever" behavior fails instantly instea
 
 ## 3. Reusable `Timeout` objects do not enforce a shared deadline after a timeout
 
-Location: `addons/vest/timeout.gd:12-31`
+Historical location at discovery: `addons/vest/timeout.gd:12-31`
 
 `Timeout.until()` subtracts elapsed time from `_remaining` only on success. When the wait itself times out, `_remaining` is left unchanged even though the full timeout budget was spent.
 
@@ -28,7 +30,7 @@ Impact: a `Timeout` advertised as "reused for multiple wait operations" does not
 
 ## 4. Invalid `--vest-file` input crashes the CLI path instead of failing cleanly
 
-Location: `addons/vest/cli/vest-cli-runner.gd:19-30`, `addons/vest/cli/vest-cli-runner.gd:50-59`, `addons/vest/tap-reporter.gd:11-22`
+Historical locations at discovery: `addons/vest/cli/vest-cli-runner.gd:19-30`, `addons/vest/cli/vest-cli-runner.gd:50-59`, `addons/vest/tap-reporter.gd:11-22`
 
 I reproduced this with:
 
@@ -42,7 +44,7 @@ Impact: invalid CLI input produces internal script errors instead of a controlle
 
 ## 5. `VestDaemonRunner` leaks its listening server on early failure paths
 
-Location: `addons/vest/runner/vest-daemon-runner.gd:35-55`
+Historical location at discovery: `addons/vest/runner/vest-daemon-runner.gd:35-55`
 
 `_run_with_params()` calls `_start()` and then returns early on failures such as "agent didn't connect in time" without calling `_stop()`. `_stop()` is only reached after the receive loop.
 
@@ -50,7 +52,7 @@ Impact: failed runs can leave `_server` listening and `_port` allocated in memor
 
 ## 6. Parameterized test discovery logs warnings but still executes invalid provider paths
 
-Location: `addons/vest/test/mixins/gather-suite-mixin.gd:71-85`
+Historical location at discovery: `addons/vest/test/mixins/gather-suite-mixin.gd:71-85`
 
 When a parameter provider is missing, the code emits a warning but still executes `await call(param_provider_name)`. When a provider returns the wrong shape, the code emits another warning but still executes `for i in range(params.size())`.
 
@@ -58,7 +60,7 @@ Impact: malformed parameterized tests do not fail gracefully during suite discov
 
 ## 7. Disabling/unloading the plugin clears the project's persisted Vest settings
 
-Location: `addons/vest/plugin.gd:61-93`
+Historical location at discovery: `addons/vest/plugin.gd:61-93`
 
 `_exit_tree()` calls `remove_settings(SETTINGS)`, which eventually calls `ProjectSettings.clear(setting.name)` for every `vest/*` setting. That removes user-customized settings such as `vest/runner_timeout`, `vest/tests_root`, and `vest/test_name_patterns`.
 
@@ -66,7 +68,7 @@ Impact: plugin unload/disable can wipe project configuration instead of just unr
 
 ## 8. Single-script runs emit `null` partial results because `_result_buffer` is shadowed
 
-Location: `addons/vest/runner/vest-local-runner.gd:4-32`, especially `:8` and `:97`
+Historical locations at discovery: `addons/vest/runner/vest-local-runner.gd:4-32`, especially `:8` and `:97`
 
 `run_script()` declares a local `var _result_buffer = VestResult.Suite.new()`, which shadows the instance field. `_run_case()` later emits `on_partial_result.emit(_result_buffer)` using the instance field, not the local variable, so partial updates for single-script runs are emitted as `null`.
 

@@ -3,6 +3,9 @@ extends VestTest
 func get_suite_name() -> String:
 	return "Parameterized"
 
+func should_warn_parameterized_provider() -> bool:
+	return false
+
 func params_provider():
 	return [
 		[2, 5, 7],

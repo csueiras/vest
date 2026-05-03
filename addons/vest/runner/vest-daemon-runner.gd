@@ -8,6 +8,7 @@ var _port: int
 var _peer: StreamPeerTCP
 
 var _is_debug_run := false
+var _emit_diagnostics := true
 
 ## Enable debug mode for the next run
 func with_debug() -> VestDaemonRunner:
@@ -37,7 +38,7 @@ func _run_with_params(params: VestCLI.Params) -> VestResult.Suite:
 
 	# Start host
 	if _start(-1) != OK:
-		push_error("Couldn't start vest host!")
+		_push_error("Couldn't start vest host!")
 		_stop()
 		return null
 
@@ -48,7 +49,7 @@ func _run_with_params(params: VestCLI.Params) -> VestResult.Suite:
 
 	# Wait for agent to connect
 	if await timeout.until(func(): return _server.is_connection_available()) != OK:
-		push_error("Agent didn't connect in time!")
+		_push_error("Agent didn't connect in time!")
 		_stop()
 		return null
 
@@ -74,13 +75,13 @@ func _run_with_params(params: VestCLI.Params) -> VestResult.Suite:
 	_stop()
 
 	if results == null:
-		push_error("Test run failed!")
+		_push_error("Test run failed!")
 		return null
 	elif results is Dictionary:
 		var suite_result = VestResult.Suite._from_wire(results)
 		return suite_result
 	else:
-		push_error("Unrecognized test result data! %s" % [results])
+		_push_error("Unrecognized test result data! %s" % [results])
 		return null
 
 func _start(port: int = -1):
@@ -98,7 +99,7 @@ func _start(port: int = -1):
 	_port = port
 
 	if not _server.is_listening():
-		push_error("Failed to find available port!")
+		_push_error("Failed to find available port!")
 		return ERR_CANT_CREATE
 
 	return OK
@@ -119,3 +120,7 @@ func _launch_child_process(params: VestCLI.Params) -> void:
 	else:
 		_is_debug_run = false
 		VestCLI.debug(params)
+
+func _push_error(message: String) -> void:
+	if _emit_diagnostics:
+		push_error(message)

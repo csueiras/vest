@@ -27,11 +27,10 @@ static func get_config_path() -> String:
 
 			if DirAccess.dir_exists_absolute(directory):
 				_path = path
-				print("Found local settings path: %s" % [_path])
 				break
 	return _path
 
-static func flush() -> void:
+static func flush(emit_error: bool = true) -> bool:
 	var data := {
 		"test_glob": test_glob if test_glob else "",
 		"run_params": get_run_params().to_args()
@@ -39,12 +38,14 @@ static func flush() -> void:
 
 	var file := FileAccess.open(get_config_path(), FileAccess.WRITE)
 	if file == null:
-		push_error("Couldn't write local settings!")
-		return
+		if emit_error:
+			push_error("Couldn't write local settings!")
+		return false
 
 	file.store_string(var_to_str(data))
 	file.flush()
 	file.close()
+	return true
 
 static func reload() -> void:
 	var data := _read_data()

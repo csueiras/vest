@@ -2,6 +2,13 @@ extends VestTest
 
 var _runner_timeout := 8.0
 
+class NoopDaemonRunner extends VestDaemonRunner:
+	func _init():
+		_emit_diagnostics = false
+
+	func _launch_child_process(_params: VestCLI.Params) -> void:
+		pass
+
 func get_suite_name() -> String:
 	return "Runner"
 
@@ -25,7 +32,7 @@ func test_run_script_emits_non_null_partial_results():
 		expect_not_null(partial)
 
 func test_daemon_runner_cleans_up_after_connection_timeout():
-	var runner := _make_noop_daemon_runner()
+	var runner := NoopDaemonRunner.new()
 	var params := VestCLI.Params.new()
 	params.run_file = "res://tests/autoload.test.gd"
 
@@ -47,15 +54,3 @@ func test_daemon_stop_is_null_safe():
 	expect_null(runner._peer)
 	expect_null(runner._server)
 	expect_equal(runner._port, -1)
-
-func _make_noop_daemon_runner() -> VestDaemonRunner:
-	var script := GDScript.new()
-	script.source_code = """
-extends "res://addons/vest/runner/vest-daemon-runner.gd"
-
-func _launch_child_process(_params):
-	pass
-"""
-	script.reload()
-
-	return script.new() as VestDaemonRunner

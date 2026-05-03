@@ -68,10 +68,9 @@ func add_settings(settings: Array):
 		add_setting(setting)
 
 func add_setting(setting: Dictionary):
-	if ProjectSettings.has_setting(setting.name):
-		return
+	if not ProjectSettings.has_setting(setting.name):
+		ProjectSettings.set_setting(setting.name, setting.value)
 
-	ProjectSettings.set_setting(setting.name, setting.value)
 	ProjectSettings.set_initial_value(setting.name, setting.value)
 	ProjectSettings.add_property_info({
 		"name": setting.get("name"),
@@ -79,13 +78,3 @@ func add_setting(setting: Dictionary):
 		"hint": setting.get("hint", PROPERTY_HINT_NONE),
 		"hint_string": setting.get("hint_string", "")
 	})
-
-func remove_settings(settings: Array):
-	for setting in settings:
-		remove_setting(setting)
-
-func remove_setting(setting: Dictionary):
-	if not ProjectSettings.has_setting(setting.name):
-		return
-
-	ProjectSettings.clear(setting.name)

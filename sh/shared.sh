@@ -13,8 +13,13 @@ print() {
 version="$(grep "version=" addons/vest/plugin.cfg | cut -d"\"" -f2)"
 
 addons=("vest")
-declare -A addon_deps=(\
-)
+
+get_addon_deps() {
+  case "$1" in
+    vest) echo "" ;;
+    *) echo "" ;;
+  esac
+}
 
 # git config
 if [[ "$(git config user.name)" == "" ]]; then
@@ -22,4 +27,3 @@ if [[ "$(git config user.name)" == "" ]]; then
   git config user.name "Fox's Sake CI"
   git config user.email "ci@foxssake.studio"
 fi;
-

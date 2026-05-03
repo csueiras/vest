@@ -80,12 +80,12 @@ func _get_suite() -> VestDefs.Suite:
 							method_name
 						)
 				else:
-					push_warning(
+					_warn_parameterized_provider(
 						"Can't run parametrized test \"%s\", provider \"%s\" didn't return array or arrays: %s" % \
 						[method["name"], param_provider_name, params]
 					)
 			else:
-				push_warning(
+				_warn_parameterized_provider(
 					"Can't run parametrized test \"%s\", provider method \"%s\" is missing!" % \
 					[method["name"], param_provider_name]
 				)
@@ -93,3 +93,9 @@ func _get_suite() -> VestDefs.Suite:
 
 func _is_only(name: String) -> bool:
 	return name.ends_with("__only")
+
+func _warn_parameterized_provider(message: String) -> void:
+	if has_method("should_warn_parameterized_provider") and not call("should_warn_parameterized_provider"):
+		return
+
+	push_warning(message)
